@@ -2,6 +2,7 @@ class Game {
 
     private engine: BABYLON.Engine;
     public scene: BABYLON.Scene;
+    public player : Player;
 
     public mybox;
     public direction = [0,0,0,0];
@@ -43,66 +44,31 @@ class Game {
 
         this.scene = new BABYLON.Scene(this.engine);
 
-        let camera = new BABYLON.ArcRotateCamera('debugCamera', -1.5, 1, 10, new BABYLON.Vector3(0, 0, 0), this.scene);
-        camera.attachControl(this.engine.getRenderingCanvas());
+        // 
+        let camera = new BABYLON.FreeCamera('debugCamera', new BABYLON.Vector3(10,50,-10), this.scene);
+        camera.setTarget(BABYLON.Vector3.Zero());
+
         let light = new BABYLON.HemisphericLight('', new BABYLON.Vector3(0, 1, 0), this.scene);
         
+        window.addEventListener('keydown', (evt) => {
+            if (evt.keyCode == 32) { // space
+                this.scene.setActiveCameraByName('debugCamera').attachControl(this.engine.getRenderingCanvas());
+            }
+        })
     }
 
-
-/**
- * Draw the local axis of the player
- */
-    private  debug (mesh, scene) {
-
-    mesh.computeWorldMatrix();
-    var m = mesh.getWorldMatrix();
-
-    var v3 = BABYLON.Vector3;
-    var s = 5;
-
-    var x = new v3(s,0,0);
-    var y = new v3(0,s,0);
-    var z = new v3(0,0,s);
-
-    var startInWorld = mesh.getAbsolutePosition();
-    var endInWorld = BABYLON.Vector3.TransformCoordinates(x, m);
-    if (mesh._xAxis) {
-        mesh._xAxis.dispose();
-    }
-    mesh._xAxis = BABYLON.Mesh.CreateLines("lines", [
-        startInWorld,
-        endInWorld
-    ], scene);
-    mesh._xAxis.color = BABYLON.Color3.Red();
-
-    var endInWorld = BABYLON.Vector3.TransformCoordinates(y, m);
-    if (mesh._yAxis) {
-        mesh._yAxis.dispose();
-    }
-    mesh._yAxis = BABYLON.Mesh.CreateLines("lines",
-        [startInWorld,
-        endInWorld
-    ], scene);
-    mesh._yAxis.color = BABYLON.Color3.Green();
-
-    var endInWorld = BABYLON.Vector3.TransformCoordinates(z, m);
-    if (mesh._zAxis) {
-        mesh._zAxis.dispose();
-    }
-    mesh._zAxis = BABYLON.Mesh.CreateLines("lines", [
-        startInWorld,
-        endInWorld
-    ], scene);
-    mesh._zAxis.color = BABYLON.Color3.Blue();
-}
 
     private _initGame () {
         this.scene.debugLayer.show();
         
-        let box = BABYLON.MeshBuilder.CreateBox('origin', {size:1}, this.scene);
-        
-        var p = new Player(this);
+        let wall = BABYLON.MeshBuilder.CreateBox('origin', {width:20, height:20, depth:1}, this.scene);
+        wall.position.z = 10;
+        wall.position.y = 8;
+        wall.checkCollisions = true;
+
+        this.player = new Player(this);
+
+        // let en = new Enemy(BABYLON.MeshBuilder.CreateBox('origin', {size:1}, this.scene), this)
     }
 
 }

@@ -5,6 +5,7 @@
     "files": [
         "typings/babylon.d.ts",
         "Game.ts",
-        "Player.ts"
+        "Player.ts",
+        "Enemy.ts"
     ]
 }
