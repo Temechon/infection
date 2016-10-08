@@ -1,149 +1,184 @@
-var Player = (function () {
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var Player = (function (_super) {
+    __extends(Player, _super);
     function Player(game) {
-        var _this = this;
+        _super.call(this, '__player__', game.scene);
+        this._lookRotation = 0;
+        this._localMovement = BABYLON.Vector3.Zero();
+        this.speed = 2;
         this._directions = [0, 0, 0, 0];
+        this._shootingDirections = BABYLON.Vector3.Zero();
         this._game = game;
-        this._camera = new BABYLON.ArcRotateCamera('playerCamera', -1.5, Math.PI / 2, 0, new BABYLON.Vector3(0, 0, 0), this._game.scene);
-        this._camera.lowerRadiusLimit = 0;
-        this._camera.upperRadiusLimit = 0;
-        // this._camera.lowerBetaLimit = Math.PI/2-0.3;
-        // this._camera.upperBetaLimit = Math.PI/2+0.3;
-        this._camera.checkCollisions = true;
-        this._game.scene.setActiveCameraByName('playerCamera').attachControl(this._game.scene.getEngine().getRenderingCanvas());
-        var cartesianCoordinates = BABYLON.Vector3.Zero();
-        this._game.scene.registerBeforeRender(this._update.bind(this));
-        window.addEventListener("keyup", function (evt) {
-            _this.handleKeyUp(evt.keyCode);
-        });
-        window.addEventListener("keydown", function (evt) {
-            _this.handleKeyDown(evt.keyCode);
-        });
+        // Player game loop
+        this._updateCall = this._update.bind(this);
+        this._game.scene.registerBeforeRender(this._updateCall);
+        // Keyboard events
+        this._handleKeyDownCall = this._handleKey.bind(this, 1);
+        this._handleKeyUpCall = this._handleKey.bind(this, 0);
+        window.addEventListener("keyup", this._handleKeyUpCall);
+        window.addEventListener("keydown", this._handleKeyDownCall);
+        // Model
         this._model = BABYLON.MeshBuilder.CreateBox('myfirstbox', { height: 2, width: 1, depth: 1 }, this._game.scene);
-        this._cameraPosition = BABYLON.MeshBuilder.CreateBox('viseur', { height: 0.5, width: 0.5, depth: 0.5 }, this._game.scene);
-        this._cameraPosition.position.copyFromFloats(2, 2, -4);
-        this._cameraPosition.parent = this._model;
-        // this._cameraPosition.isVisible = false;
+        this._model.parent = this;
+        this._model.ellipsoid = BABYLON.Vector3.Zero();
+        this.ellipsoid = this._model.getBoundingInfo().boundingBox.extendSize.clone().multiplyByFloats(1, 0.5, 1);
+        // Create default weapon
+        this.weapon = new Weapon(this._game);
+        this.debug(2, this);
+        this.debug(4, this._model);
     }
-    Object.defineProperty(Player.prototype, "position", {
-        get: function () {
-            return this._model.position;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Player.prototype._update = function () {
-        this.move();
-        this.debug(this._model, this._game.scene);
-        // setyup camera
-        var cam = this._camera;
-        var x = cam.radius * Math.cos(cam.alpha) * Math.cos(cam.beta);
-        var y = cam.radius * Math.sin(cam.beta);
-        var z = cam.radius * Math.sin(cam.alpha) * Math.cos(cam.beta);
-        var pos = this._cameraPosition.getAbsolutePosition();
-        cam.position.copyFromFloats(pos.x + x, pos.y + y, pos.z + z);
-        cam.setTarget(pos);
-        this._model.rotation.y = -cam.alpha - 1.5;
+    Player.prototype.dispose = function () {
+        window.removeEventListener("keyup", this._handleKeyUpCall);
+        window.removeEventListener("keydown", this._handleKeyDownCall);
+        this._game.scene.unregisterBeforeRender(this._updateCall);
+        _super.prototype.dispose.call(this);
     };
-    Player.prototype.move = function () {
-        var localMovement = BABYLON.Vector3.Zero();
-        var matrix = this._model.getWorldMatrix();
+    Player.prototype._update = function () {
+        this._move();
+        this._shoot();
+    };
+    /**
+     * Move the player (parent mesh), and adapt the child orientation
+     */
+    Player.prototype._move = function () {
+        this._localMovement.copyFromFloats(0, 0, 0);
+        var matrix = this.getWorldMatrix();
         if (this._directions[0] != 0) {
-            localMovement.z = 1;
+            this._localMovement.z = 1;
+            this._lookRotation = 0;
         }
         if (this._directions[1] != 0) {
-            localMovement.z = -1;
+            this._localMovement.z = -1;
+            this._lookRotation = Math.PI;
         }
         if (this._directions[2] != 0) {
-            localMovement.x = -1;
+            this._localMovement.x = -1;
+            this._lookRotation = -Math.PI / 2;
+            if (this._directions[0] != 0) {
+                this._lookRotation = -Math.PI / 4;
+            }
+            if (this._directions[1] != 0) {
+                this._lookRotation = -3 * Math.PI / 4;
+            }
         }
         if (this._directions[3] != 0) {
-            localMovement.x = 1;
+            this._localMovement.x = 1;
+            this._lookRotation = Math.PI / 2;
+            if (this._directions[0] != 0) {
+                this._lookRotation = Math.PI / 4;
+            }
+            if (this._directions[1] != 0) {
+                this._lookRotation = 3 * Math.PI / 4;
+            }
         }
-        BABYLON.Vector3.TransformCoordinatesToRef(localMovement, matrix, localMovement);
-        localMovement.subtractInPlace(this._model.position).scaleInPlace(0.1);
-        this._model.position.addInPlace(localMovement);
+        BABYLON.Vector3.TransformCoordinatesToRef(this._localMovement, matrix, this._localMovement);
+        this._localMovement.subtractInPlace(this.position).scaleInPlace(0.1 * this.speed);
+        this.moveWithCollisions(this._localMovement);
+        this._model.rotation.y = this._lookRotation;
     };
-    Player.prototype._choose_directions = function (nb, value) {
-        this._directions[nb] = value;
+    Player.prototype._shoot = function () {
+        if (this._shootingDirections.lengthSquared() > 0) {
+            this.weapon.shoot(this.position, this._shootingDirections);
+        }
     };
-    Player.prototype.handleKeyDown = function (keycode) {
-        switch (keycode) {
+    Player.prototype._choose = function (array, nb, value) {
+        array[nb] = value;
+    };
+    Player.prototype._handleKey = function (value, evt) {
+        switch (evt.keyCode) {
             case Player.DIRECTIONS.ZQSD.TOP:
             case Player.DIRECTIONS.QWSD.TOP:
-                this._choose_directions(0, 1);
+                this._choose(this._directions, 0, value);
                 break;
             case Player.DIRECTIONS.ZQSD.BOT:
             case Player.DIRECTIONS.QWSD.BOT:
-                this._choose_directions(1, 1);
+                this._choose(this._directions, 1, value);
                 break;
             case Player.DIRECTIONS.ZQSD.LEFT:
             case Player.DIRECTIONS.QWSD.LEFT:
-                this._choose_directions(2, 1);
+                this._choose(this._directions, 2, value);
                 break;
             case Player.DIRECTIONS.ZQSD.RIGHT:
             case Player.DIRECTIONS.QWSD.RIGHT:
-                this._choose_directions(3, 1);
+                this._choose(this._directions, 3, value);
+                break;
+            case Player.ACTIONS.SHOOT.TOP:
+                this._shootingDirections.z = value;
+                break;
+            case Player.ACTIONS.SHOOT.BOT:
+                this._shootingDirections.z = -value;
+                break;
+            case Player.ACTIONS.SHOOT.LEFT:
+                this._shootingDirections.x = -value;
+                break;
+            case Player.ACTIONS.SHOOT.RIGHT:
+                this._shootingDirections.x = value;
                 break;
         }
     };
-    Player.prototype.handleKeyUp = function (keycode) {
-        switch (keycode) {
-            case Player.DIRECTIONS.QWSD.TOP:
-            case Player.DIRECTIONS.ZQSD.TOP:
-                this._choose_directions(0, 0);
-                break;
-            case Player.DIRECTIONS.ZQSD.BOT:
-            case Player.DIRECTIONS.QWSD.BOT:
-                this._choose_directions(1, 0);
-                break;
-            case Player.DIRECTIONS.ZQSD.LEFT:
-            case Player.DIRECTIONS.QWSD.LEFT:
-                this._choose_directions(2, 0);
-                break;
-            case Player.DIRECTIONS.ZQSD.RIGHT:
-            case Player.DIRECTIONS.QWSD.RIGHT:
-                this._choose_directions(3, 0);
-                break;
+    Player.prototype.displayEllipsoid = function (elem) {
+        var material = this._game.scene.getMaterialByName("__ellipsoidMat__");
+        if (!material) {
+            material = new BABYLON.StandardMaterial("__ellipsoidMat__", this._game.scene);
+            material.wireframe = true;
+            material.emissiveColor = BABYLON.Color3.Green();
+            material.specularColor = BABYLON.Color3.Black();
         }
+        var s = BABYLON.Mesh.CreateSphere("__ellipsoid__", 8, 1, this._game.scene);
+        s.scaling = elem.ellipsoid.clone();
+        s.scaling.y *= 4;
+        s.scaling.x *= 2;
+        s.scaling.z *= 2;
+        s.material = material;
+        s.parent = elem;
+        s.computeWorldMatrix(true);
     };
+    ;
     /**
      * Draw the local axis of the player
      */
-    Player.prototype.debug = function (mesh, scene) {
+    Player.prototype.debug = function (size, mesh) {
         mesh.computeWorldMatrix();
         var m = mesh.getWorldMatrix();
-        var v3 = BABYLON.Vector3;
-        var s = 5;
-        var x = new v3(s, 0, 0);
-        var y = new v3(0, s, 0);
-        var z = new v3(0, 0, s);
-        var startInWorld = mesh.getAbsolutePosition();
-        var endInWorld = BABYLON.Vector3.TransformCoordinates(x, m);
-        if (mesh._xAxis) {
-            mesh._xAxis.dispose();
+        // Axis
+        var x = new BABYLON.Vector3(size, 0, 0);
+        var y = new BABYLON.Vector3(0, size, 0);
+        var z = new BABYLON.Vector3(0, 0, size);
+        // Draw an axis of the given color
+        var _drawAxis = function (color, start, end) {
+            var axis = BABYLON.Mesh.CreateLines("lines", [
+                start,
+                end
+            ], mesh.getScene());
+            axis.color = color;
+            return axis;
+        };
+        var xAxis = _drawAxis(BABYLON.Color3.Red(), mesh.getAbsolutePosition(), BABYLON.Vector3.TransformCoordinates(x, m));
+        xAxis.parent = mesh;
+        var yAxis = _drawAxis(BABYLON.Color3.Green(), mesh.getAbsolutePosition(), BABYLON.Vector3.TransformCoordinates(x, m));
+        yAxis.parent = mesh;
+        var zAxis = _drawAxis(BABYLON.Color3.Blue(), mesh.getAbsolutePosition(), BABYLON.Vector3.TransformCoordinates(x, m));
+        zAxis.parent = mesh;
+        // Ellipsoid 
+        var ellipsoidMat = mesh.getScene().getMaterialByName("__ellipsoidMat__");
+        if (!ellipsoidMat) {
+            ellipsoidMat = new BABYLON.StandardMaterial("__ellipsoidMat__", mesh.getScene());
+            ellipsoidMat.wireframe = true;
+            ellipsoidMat.emissiveColor = BABYLON.Color3.Green();
+            ellipsoidMat.specularColor = BABYLON.Color3.Black();
         }
-        mesh._xAxis = BABYLON.Mesh.CreateLines("lines", [
-            startInWorld,
-            endInWorld
-        ], scene);
-        mesh._xAxis.color = BABYLON.Color3.Red();
-        var endInWorld = BABYLON.Vector3.TransformCoordinates(y, m);
-        if (mesh._yAxis) {
-            mesh._yAxis.dispose();
-        }
-        mesh._yAxis = BABYLON.Mesh.CreateLines("lines", [startInWorld,
-            endInWorld
-        ], scene);
-        mesh._yAxis.color = BABYLON.Color3.Green();
-        var endInWorld = BABYLON.Vector3.TransformCoordinates(z, m);
-        if (mesh._zAxis) {
-            mesh._zAxis.dispose();
-        }
-        mesh._zAxis = BABYLON.Mesh.CreateLines("lines", [
-            startInWorld,
-            endInWorld
-        ], scene);
-        mesh._zAxis.color = BABYLON.Color3.Blue();
+        var ellipsoid = BABYLON.Mesh.CreateSphere("__ellipsoid__", 9, 1, mesh.getScene());
+        ellipsoid.scaling = mesh.ellipsoid.clone();
+        ellipsoid.scaling.y *= 4;
+        ellipsoid.scaling.x *= 2;
+        ellipsoid.scaling.z *= 2;
+        ellipsoid.material = ellipsoidMat;
+        ellipsoid.parent = mesh;
+        ellipsoid.computeWorldMatrix(true);
     };
     Player.DIRECTIONS = {
         ZQSD: {
@@ -159,6 +194,14 @@ var Player = (function () {
             RIGHT: 68
         }
     };
+    Player.ACTIONS = {
+        SHOOT: {
+            TOP: 38,
+            BOT: 40,
+            LEFT: 37,
+            RIGHT: 39
+        }
+    };
     return Player;
-}());
+}(BABYLON.Mesh));
 //# sourceMappingURL=Player.js.map

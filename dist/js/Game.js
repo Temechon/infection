@@ -27,7 +27,7 @@ var Game = (function () {
         var _this = this;
         this.scene = new BABYLON.Scene(this.engine);
         // 
-        var camera = new BABYLON.FreeCamera('debugCamera', new BABYLON.Vector3(10, 50, -10), this.scene);
+        var camera = new BABYLON.FreeCamera('debugCamera', new BABYLON.Vector3(0, 10, -10).scaleInPlace(3), this.scene);
         camera.setTarget(BABYLON.Vector3.Zero());
         var light = new BABYLON.HemisphericLight('', new BABYLON.Vector3(0, 1, 0), this.scene);
         window.addEventListener('keydown', function (evt) {
@@ -42,7 +42,7 @@ var Game = (function () {
         wall.position.z = 10;
         wall.position.y = 8;
         wall.checkCollisions = true;
-        this.player = new Player(this);
+        new Player(this);
         // let en = new Enemy(BABYLON.MeshBuilder.CreateBox('origin', {size:1}, this.scene), this)
     };
     return Game;

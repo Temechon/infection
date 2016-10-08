@@ -5,7 +5,10 @@
     "files": [
         "typings/babylon.d.ts",
         "Game.ts",
+        "Timer.ts",
         "Player.ts",
-        "Enemy.ts"
+        "Enemy.ts",
+        "weapons/Bullet.ts",
+        "weapons/Weapon.ts"
     ]
 }
