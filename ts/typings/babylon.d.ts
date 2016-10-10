@@ -7561,6 +7561,7 @@ declare module BABYLON {
         onCollideObservable: Observable<AbstractMesh>;
         private _onCollideObserver;
         onCollide: () => void;
+        collisionsPredicate : (mesh:BABYLON.Mesh) => boolean;
         /**
         * An event triggered when the collision's position changes
         * @type {BABYLON.Observable}

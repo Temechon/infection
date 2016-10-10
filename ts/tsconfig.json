@@ -9,6 +9,7 @@
         "Player.ts",
         "Enemy.ts",
         "weapons/Bullet.ts",
-        "weapons/Weapon.ts"
+        "weapons/Weapon.ts",
+        "GameObject.ts"
     ]
 }

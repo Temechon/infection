@@ -6,13 +6,12 @@ var __extends = (this && this.__extends) || function (d, b) {
 var Player = (function (_super) {
     __extends(Player, _super);
     function Player(game) {
-        _super.call(this, '__player__', game.scene);
+        _super.call(this, '__player__', game);
         this._lookRotation = 0;
         this._localMovement = BABYLON.Vector3.Zero();
         this.speed = 2;
         this._directions = [0, 0, 0, 0];
         this._shootingDirections = BABYLON.Vector3.Zero();
-        this._game = game;
         // Player game loop
         this._updateCall = this._update.bind(this);
         this._game.scene.registerBeforeRender(this._updateCall);
@@ -25,6 +24,8 @@ var Player = (function (_super) {
         this._model = BABYLON.MeshBuilder.CreateBox('myfirstbox', { height: 2, width: 1, depth: 1 }, this._game.scene);
         this._model.parent = this;
         this._model.ellipsoid = BABYLON.Vector3.Zero();
+        this._model.checkCollisions = true;
+        this.excludedMeshesForCollisions.push(this._model);
         this.ellipsoid = this._model.getBoundingInfo().boundingBox.extendSize.clone().multiplyByFloats(1, 0.5, 1);
         // Create default weapon
         this.weapon = new Weapon(this._game);
@@ -138,48 +139,6 @@ var Player = (function (_super) {
         s.computeWorldMatrix(true);
     };
     ;
-    /**
-     * Draw the local axis of the player
-     */
-    Player.prototype.debug = function (size, mesh) {
-        mesh.computeWorldMatrix();
-        var m = mesh.getWorldMatrix();
-        // Axis
-        var x = new BABYLON.Vector3(size, 0, 0);
-        var y = new BABYLON.Vector3(0, size, 0);
-        var z = new BABYLON.Vector3(0, 0, size);
-        // Draw an axis of the given color
-        var _drawAxis = function (color, start, end) {
-            var axis = BABYLON.Mesh.CreateLines("lines", [
-                start,
-                end
-            ], mesh.getScene());
-            axis.color = color;
-            return axis;
-        };
-        var xAxis = _drawAxis(BABYLON.Color3.Red(), mesh.getAbsolutePosition(), BABYLON.Vector3.TransformCoordinates(x, m));
-        xAxis.parent = mesh;
-        var yAxis = _drawAxis(BABYLON.Color3.Green(), mesh.getAbsolutePosition(), BABYLON.Vector3.TransformCoordinates(x, m));
-        yAxis.parent = mesh;
-        var zAxis = _drawAxis(BABYLON.Color3.Blue(), mesh.getAbsolutePosition(), BABYLON.Vector3.TransformCoordinates(x, m));
-        zAxis.parent = mesh;
-        // Ellipsoid 
-        var ellipsoidMat = mesh.getScene().getMaterialByName("__ellipsoidMat__");
-        if (!ellipsoidMat) {
-            ellipsoidMat = new BABYLON.StandardMaterial("__ellipsoidMat__", mesh.getScene());
-            ellipsoidMat.wireframe = true;
-            ellipsoidMat.emissiveColor = BABYLON.Color3.Green();
-            ellipsoidMat.specularColor = BABYLON.Color3.Black();
-        }
-        var ellipsoid = BABYLON.Mesh.CreateSphere("__ellipsoid__", 9, 1, mesh.getScene());
-        ellipsoid.scaling = mesh.ellipsoid.clone();
-        ellipsoid.scaling.y *= 4;
-        ellipsoid.scaling.x *= 2;
-        ellipsoid.scaling.z *= 2;
-        ellipsoid.material = ellipsoidMat;
-        ellipsoid.parent = mesh;
-        ellipsoid.computeWorldMatrix(true);
-    };
     Player.DIRECTIONS = {
         ZQSD: {
             TOP: 90,
@@ -203,5 +162,5 @@ var Player = (function (_super) {
         }
     };
     return Player;
-}(BABYLON.Mesh));
+}(GameObject));
 //# sourceMappingURL=Player.js.map

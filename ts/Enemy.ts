@@ -1,41 +1,24 @@
-class Enemy extends BABYLON.Mesh{
-    private _game : Game;
+class Enemy extends GameObject{
     public model : BABYLON.AbstractMesh;
 
     public speed : number = 1;
+    public hp : number = 10;
 
     private _updateCall : () => void;
 
     constructor (model, game:Game) {
 
-        super('__enemy__', game.scene);
-        this._game = game;
+        super('__enemy__', game);
 
         model.parent = this;
-        this._updateCall = this._update.bind(this)
+        model.ellipsoid = BABYLON.Vector3.Zero();
+        this._updateCall = this._update.bind(this);
+        model.checkCollisions = true;
+        this.excludedMeshesForCollisions.push(model); 
 
-        this.ellipsoid = new BABYLON.Vector3(0.5,0.25,0.5).scaleInPlace(2);
+        this.ellipsoid = model.getBoundingInfo().boundingBox.extendSize.clone().multiplyByFloats(1,0.5,1);
 
-        let displayEllipsoid = (elem) => {
-            var material = this._game.scene.getMaterialByName("__ellipsoidMat__") as BABYLON.StandardMaterial;
-            if (! material) {
-                material = new BABYLON.StandardMaterial("__ellipsoidMat__", this._game.scene);
-                material.wireframe = true;
-                material.emissiveColor = BABYLON.Color3.Green();
-                material.specularColor = BABYLON.Color3.Black();
-            }
-
-            var s = BABYLON.Mesh.CreateSphere("__ellipsoid__", 8, 1, this._game.scene);
-            s.scaling = elem.ellipsoid.clone();
-            s.scaling.y *= 4;
-            s.scaling.x *= 2;
-            s.scaling.z *= 2;
-            s.material = material;
-            s.parent = elem;
-            s.computeWorldMatrix(true);
-        };
-        displayEllipsoid(this);
-
+        // this.debug(2, this);
         this._game.scene.registerBeforeRender(this._updateCall);
     }
 
@@ -49,8 +32,18 @@ class Enemy extends BABYLON.Mesh{
         this.look(this._game.player.position);
         this.moveWithCollisions(dest);
     }
+    
+    /**
+     * Damage this enemy. If hp comes to 0, he dies.
+     */
+    public hit(damage:number) {
+        this.hp -= damage;
+        if (this.hp <=0) {
+            this.dispose();
+        }
+    }
 
-    public look = function(pos) {
+    public look (pos) {
         var dv = pos.subtract(this.position);
         var yaw = -Math.atan2(dv.z, dv.x) - Math.PI / 2;
         this.rotationQuaternion = BABYLON.Quaternion.RotationYawPitchRoll(yaw, 0, 0);

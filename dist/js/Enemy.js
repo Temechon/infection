@@ -6,36 +6,16 @@ var __extends = (this && this.__extends) || function (d, b) {
 var Enemy = (function (_super) {
     __extends(Enemy, _super);
     function Enemy(model, game) {
-        var _this = this;
-        _super.call(this, '__enemy__', game.scene);
+        _super.call(this, '__enemy__', game);
         this.speed = 1;
-        this.look = function (pos) {
-            var dv = pos.subtract(this.position);
-            var yaw = -Math.atan2(dv.z, dv.x) - Math.PI / 2;
-            this.rotationQuaternion = BABYLON.Quaternion.RotationYawPitchRoll(yaw, 0, 0);
-        };
-        this._game = game;
+        this.hp = 10;
         model.parent = this;
+        model.ellipsoid = BABYLON.Vector3.Zero();
         this._updateCall = this._update.bind(this);
-        this.ellipsoid = new BABYLON.Vector3(0.5, 0.25, 0.5).scaleInPlace(2);
-        var displayEllipsoid = function (elem) {
-            var material = _this._game.scene.getMaterialByName("__ellipsoidMat__");
-            if (!material) {
-                material = new BABYLON.StandardMaterial("__ellipsoidMat__", _this._game.scene);
-                material.wireframe = true;
-                material.emissiveColor = BABYLON.Color3.Green();
-                material.specularColor = BABYLON.Color3.Black();
-            }
-            var s = BABYLON.Mesh.CreateSphere("__ellipsoid__", 8, 1, _this._game.scene);
-            s.scaling = elem.ellipsoid.clone();
-            s.scaling.y *= 4;
-            s.scaling.x *= 2;
-            s.scaling.z *= 2;
-            s.material = material;
-            s.parent = elem;
-            s.computeWorldMatrix(true);
-        };
-        displayEllipsoid(this);
+        model.checkCollisions = true;
+        this.excludedMeshesForCollisions.push(model);
+        this.ellipsoid = model.getBoundingInfo().boundingBox.extendSize.clone().multiplyByFloats(1, 0.5, 1);
+        // this.debug(2, this);
         this._game.scene.registerBeforeRender(this._updateCall);
     }
     Enemy.prototype._update = function () {
@@ -48,6 +28,20 @@ var Enemy = (function (_super) {
         this.look(this._game.player.position);
         this.moveWithCollisions(dest);
     };
+    /**
+     * Damage this enemy. If hp comes to 0, he dies.
+     */
+    Enemy.prototype.hit = function (damage) {
+        this.hp -= damage;
+        if (this.hp <= 0) {
+            this.dispose();
+        }
+    };
+    Enemy.prototype.look = function (pos) {
+        var dv = pos.subtract(this.position);
+        var yaw = -Math.atan2(dv.z, dv.x) - Math.PI / 2;
+        this.rotationQuaternion = BABYLON.Quaternion.RotationYawPitchRoll(yaw, 0, 0);
+    };
     return Enemy;
-}(BABYLON.Mesh));
+}(GameObject));
 //# sourceMappingURL=Enemy.js.map

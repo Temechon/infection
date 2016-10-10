@@ -6,7 +6,7 @@ class Weapon {
     private _cadencyTimer : Timer;
     
     // This weapon can shoot each XX ms
-    public cadency : number = 10;
+    public cadency : number = 200;
     
     private _canShoot : boolean = true;
     

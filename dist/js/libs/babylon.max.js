@@ -9403,6 +9403,7 @@ var BABYLON;
             this.alwaysSelectAsActiveMesh = false;
             // Collisions
             this._checkCollisions = false;
+            this.collisionsPredicate = function(mesh) {return true;};
             this.ellipsoid = new BABYLON.Vector3(0.5, 1, 0.5);
             this.ellipsoidOffset = new BABYLON.Vector3(0, 0, 0);
             this._collider = new BABYLON.Collider();
@@ -11879,10 +11880,12 @@ var BABYLON;
                 return;
             }
             collider._initialize(position, velocity, closeDistance);
-            // Check all meshes
+            // Check all meshes except registered meshes
             for (var index = 0; index < this._scene.meshes.length; index++) {
                 var mesh = this._scene.meshes[index];
-                if (mesh.isEnabled() && mesh.checkCollisions && mesh.subMeshes && mesh !== excludedMesh) {
+                var checkCollisionForThisMesh = true;
+                checkCollisionForThisMesh = excludedMesh.collisionsPredicate(mesh);
+                if (mesh.isEnabled() && mesh.checkCollisions && mesh.subMeshes && mesh !== excludedMesh && checkCollisionForThisMesh) {
                     mesh._checkCollision(collider);
                 }
             }

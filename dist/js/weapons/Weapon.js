@@ -2,7 +2,7 @@ var Weapon = (function () {
     function Weapon(game) {
         var _this = this;
         // This weapon can shoot each XX ms
-        this.cadency = 10;
+        this.cadency = 200;
         this._canShoot = true;
         this._game = game;
         this._cadencyTimer = new Timer(this.cadency, game.scene, { repeat: -1, autostart: true });
